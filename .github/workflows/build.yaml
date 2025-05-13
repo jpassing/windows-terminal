@@ -1,0 +1,53 @@
+name: CI
+on:
+  push:
+    branches: [ "fork-master" ]
+  pull_request:
+    branches: [ "fork-master" ]
+
+jobs:
+  build:
+    runs-on: windows-2025
+
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: [x64, ARM64]
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Install Visual Studio components
+      shell: cmd
+      run: |
+        curl -fSLo vs_BuildTools.exe https://aka.ms/vs/17/release/vs_BuildTools.exe 
+        start /w vs_BuildTools ^
+            --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" ^
+            --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
+            --includeRecommended --quiet --norestart --nocache --wait 
+        powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" 
+      
+    - name: Build ${{ matrix.platform }} (${{ matrix.configuration }})
+      shell: pwsh
+      run: |
+        # Initialize environment
+        Import-Module .\tools\OpenConsole.psm1
+        Set-MsBuildDevEnvironment
+
+        # Restore
+        .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
+        .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
+        dotnet restore OpenConsoleMinimal.sln
+        
+        # Build
+        msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Microsoft.Terminal.Control-${{ matrix.platform }}-${{ matrix.configuration }}
+        path: |
+          bin/*/*/Microsoft.Terminal.Control/**
