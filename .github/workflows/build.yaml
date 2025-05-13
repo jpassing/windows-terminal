@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches: [ "jpassing-master-v1.23" ]
+  pull_request:
+    branches: [ "jpassing-master-v1.23" ]
+
+jobs:
+  build:
+    runs-on: windows-2025
+
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: [x64, x86, ARM64]
+        # platform: [x64, Win32, ARM64]
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Build ${{ matrix.platform }} (${{ matrix.configuration }})
+      shell: pwsh
+      run: |
+        # Initialize environment
+        Import-Module .\tools\OpenConsole.psm1
+        Set-MsBuildDevEnvironment
+
+        # Restore
+        .\dep\nuget\nuget.exe restore OpenConsole.sln
+        .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
+        dotnet restore OpenConsole.sln
+        
+        # Build
+        msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsole.sln
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Microsoft.Terminal.Control-${{ matrix.platform }}-${{ matrix.configuration }}
+        path: |
+          bin/*/*/Microsoft.Terminal.Control/**
