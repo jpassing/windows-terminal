@@ -36,7 +36,7 @@ jobs:
         # Initialize environment
         Import-Module .\tools\OpenConsole.psm1
         Set-MsBuildDevEnvironment
-
+    
         # Restore
         .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
         .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
@@ -45,9 +45,23 @@ jobs:
         # Build
         msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
         
-    - name: Upload Artifact
+    - name: Create release package
+      shell: powershell
+      run: |
+        $SourceDir = "bin\${{ matrix.platform }}\${{ matrix.configuration }}"
+        $ZipFileName = "terminal-${{ matrix.platform }}-${{ matrix.configuration }}.zip"
+        Compress-Archive -Path "$SourceDir\*" -DestinationPath $ZipFileName -Force
+        
+    - name: Upload release package
       uses: actions/upload-artifact@v4
       with:
         name: Microsoft.Terminal.Control-${{ matrix.platform }}-${{ matrix.configuration }}
         path: |
-          bin/*/*/Microsoft.Terminal.Control/**
+          terminal-${{ matrix.platform }}-${{ matrix.configuration }}.zip
+          
+    - name: Release
+      uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+      if: github.ref_type == 'tag'
+      with:
+        files: |
+          terminal-${{ matrix.platform }}-${{ matrix.configuration }}.zip
