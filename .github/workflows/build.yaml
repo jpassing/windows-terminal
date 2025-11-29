@@ -6,12 +6,15 @@ on:
     branches: [ "fork-master" ]
 
 jobs:
+  #--------------------------------------------------------------------------
+  # Build.
+  #--------------------------------------------------------------------------
   build:
     runs-on: windows-2025
 
     strategy:
       matrix:
-        configuration: [Release]
+        configuration: [Debug, Release]
         platform: [x64, ARM64]
 
     steps:
@@ -36,7 +39,7 @@ jobs:
         # Initialize environment
         Import-Module .\tools\OpenConsole.psm1
         Set-MsBuildDevEnvironment
-
+    
         # Restore
         .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
         .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
@@ -45,9 +48,150 @@ jobs:
         # Build
         msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
         
-    - name: Upload Artifact
+    #- name: Create dummy output (for debugging only)
+    #  shell: cmd
+    #  run: |
+    #    md bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control
+    #    echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll
+    #
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: Microsoft.Terminal.Control-${{ matrix.platform }}-${{ matrix.configuration }}
         path: |
           bin/*/*/Microsoft.Terminal.Control/**
+          bin/*/*/Microsoft.Terminal.Settings.Model/**
+          bin/*/*/TerminalCore/*.winmd
+          bin/*/*/TerminalConnection/*.winmd
+
+  #--------------------------------------------------------------------------
+  # Package.
+  #--------------------------------------------------------------------------
+  package:
+    runs-on: windows-2025
+    needs: build
+    
+    permissions:
+      contents: read
+      packages: write # For package upload
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+  
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+      
+    - name: Setup NuGet CLI
+      uses: nuget/setup-nuget@v1
+      
+    - name: Initialize variables
+      shell: pwsh 
+      id: set_vars
+      run: |
+        $PackageId = 'JPassing.Terminal.Control'
+        $PackageVersion = "${{ github.run_number }}.0.0-${{ matrix.configuration }}"
+        
+        # Write the variables to the $GITHUB_OUTPUT file to share them 
+
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "package_id=$PackageId"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "package_version=$PackageVersion"
+      
+    - name: Create NuGet package
+      shell: pwsh
+      run: |
+        Get-ChildItem -Recurse artifacts | Select-Object FullName, Length | Out-String -Width 2048
+
+        @'
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+            <PropertyGroup>
+                <TerminalControlLibraryPath>$(MSBuildThisFileDirectory)..\content</TerminalControlLibraryPath>
+                <TerminalControlMetadataPath>$(MSBuildThisFileDirectory)..\metadata</TerminalControlMetadataPath>
+            </PropertyGroup>
+        
+            <ItemGroup Condition="'$(Platform)'!='AnyCPU'">
+                <!-- Copy platform-specific files -->
+                <NativeLibs Include="$(TerminalControlLibraryPath)\$(PlatformTarget)\*.*" />
+                <None Include="@(NativeLibs)">
+        	        <Link>%(FileName)%(Extension)</Link>
+        	        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        	        <Visible>false</Visible>
+                </None>
+            </ItemGroup>
+        
+            <ItemGroup Condition="'$(Platform)'=='AnyCPU'">
+                <!-- Copy files for all platforms into separate folders -->
+                <NativeLibs Include="$(TerminalControlLibraryPath)\**\*.*" />
+                <None Include="@(NativeLibs)">
+        	        <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+        	        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        	        <Visible>false</Visible>
+                </None>
+            </ItemGroup>
+        </Project>
+        '@ > "${{ steps.set_vars.outputs.package_id }}.targets"
+
+        @"
+        <?xml version="1.0"?>
+        <package>
+          <metadata>
+            <id>${{ steps.set_vars.outputs.package_id }}</id>
+            <version>${{ steps.set_vars.outputs.package_version }}</version>
+            <authors>https://github.com/jpassing/windows-terminal</authors>
+            <owners>https://github.com/jpassing/windows-terminal</owners>
+            <requireLicenseAcceptance>false</requireLicenseAcceptance>
+            <description>Windows Terminal</description>
+            <tags>Native, native</tags>
+          </metadata>
+          <files>
+            <file src="${{ steps.set_vars.outputs.package_id }}.targets" target="build" />
+
+            <!-- WinMD files, placed in metadata/ to prevent automatic referencing -->
+            
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.winmd" target="metadata" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.winmd" target="metadata" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\TerminalCore\Microsoft.Terminal.Core.winmd" target="metadata" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\TerminalConnection\Microsoft.Terminal.TerminalConnection.winmd" target="metadata" />
+            
+            <!-- DLL files, included as content -->
+            
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll" target="content\x64" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.pdb" target="content\x64" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.dll" target="content\x64" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.pdb" target="content\x64" />
+            
+            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll" target="content\arm64" />
+            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.pdb" target="content\arm64" />
+            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.dll" target="content\arm64" />
+            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.pdb" target="content\arm64" />
+          </files>
+        </package>
+        "@ > terminal.nuspec
+        
+        Get-Content terminal.nuspec 
+        nuget pack -OutputDirectory bin -Verbosity detailed terminal.nuspec
+      
+    - name: Publish NuGet package
+      shell: pwsh
+      run: |
+        @"
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="github" value="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" />
+          </packageSources>
+          <packageSourceCredentials>
+            <github>
+              <add key="Username" value="${{ github.repository_owner }}" />
+              <add key="ClearTextPassword" value="${{ secrets.GITHUB_TOKEN }}" />
+            </github>
+          </packageSourceCredentials>
+        </configuration>
+        "@ | Out-File -FilePath NuGet.config -Encoding UTF8
+      
+        nuget push bin\*.nupkg -Source "github" -ApiKey ${{ secrets.GITHUB_TOKEN }} -SkipDuplicate
