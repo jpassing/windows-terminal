@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [ "jpassing-master-v1.23" ]
+    branches: [ "fork-master" ]
   pull_request:
-    branches: [ "jpassing-master-v1.23" ]
+    branches: [ "fork-master" ]
 
 jobs:
   build:
