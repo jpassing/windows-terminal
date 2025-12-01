@@ -81,7 +81,7 @@ jobs:
       shell: pwsh
       run: |
         # List artifacts
-        tree artifacts
+        Get-ChildItem -Recurse artifacts | Select-Object FullName, Length
         
         # Build NuGet Package
         $PackageId = 'JPassing.Terminal.Control'
@@ -115,8 +115,8 @@ jobs:
           </metadata>
           <files>
             <!-- pretend the library is platform-neutral -->
-            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
-            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
+            <file src="artifacts\Microsoft.Terminal.Control\x64\Release\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
+            <file src="artifacts\Microsoft.Terminal.Control\arm64\Release\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
             <file src="$($PackageId).targets" target="build" />
           </files>
         </package>
