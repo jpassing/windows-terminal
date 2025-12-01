@@ -84,41 +84,41 @@ jobs:
         
         $PackageId = 'JPassing.Terminal.Control'
 
-@"
-<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup>
-    <!-- Select files matching tragte platform -->
-    <NativeLibs Include="$(MSBuildThisFileDirectory)\..\**\runtimes\win10-$(PlatformTarget)\native\*.*" />
-    <None Include="@(NativeLibs)">
-      <!-- Copy files to output folder, not into a subfolder of it -->
-      <Link>%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-</Project>
-"@ > $PackageId.targets
+        @"
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          <ItemGroup>
+            <!-- Select files matching tragte platform -->
+            <NativeLibs Include="$(MSBuildThisFileDirectory)\..\**\runtimes\win10-$(PlatformTarget)\native\*.*" />
+            <None Include="@(NativeLibs)">
+              <!-- Copy files to output folder, not into a subfolder of it -->
+              <Link>%(FileName)%(Extension)</Link>
+              <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            </None>
+          </ItemGroup>
+        </Project>
+        "@ > $PackageId.targets
 
-@"
-<?xml version="1.0"?>
-<package>
-  <metadata>
-    <id>$($PackageId)</id>
-    <version>${{ github.job }}</version>
-    <authors>https://github.com/jpassing/windows-terminal</authors>
-    <owners>https://github.com/jpassing/windows-terminal</owners>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Windows Terminal</description>
-    <tags>Native, native</tags>
-  </metadata>
-  <files>
-    <!-- pretend the library is platform-neutral -->
-    <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
-    <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
-    <file src="$($PackageId).targets" target="build" />
-  </files>
-</package>
-"@ > terminal.nuspec
+        @"
+        <?xml version="1.0"?>
+        <package>
+          <metadata>
+            <id>$($PackageId)</id>
+            <version>${{ github.job }}</version>
+            <authors>https://github.com/jpassing/windows-terminal</authors>
+            <owners>https://github.com/jpassing/windows-terminal</owners>
+            <requireLicenseAcceptance>false</requireLicenseAcceptance>
+            <description>Windows Terminal</description>
+            <tags>Native, native</tags>
+          </metadata>
+          <files>
+            <!-- pretend the library is platform-neutral -->
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
+            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
+            <file src="$($PackageId).targets" target="build" />
+          </files>
+        </package>
+        "@ > terminal.nuspec
         
         
         Get-Content terminal.nuspec 
