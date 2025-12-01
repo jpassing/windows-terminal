@@ -48,7 +48,7 @@ jobs:
     #    # Build
     #    msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
         
-    - name: Create dummy output
+    - name: Create dummy output (for debugging only)
       shell: cmd
       run: |
         md bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control
@@ -106,7 +106,7 @@ jobs:
         <package>
           <metadata>
             <id>$($PackageId)</id>
-            <version>${{ github.job }}</version>
+            <version>${{ github.run_number }}.0.0</version>
             <authors>https://github.com/jpassing/windows-terminal</authors>
             <owners>https://github.com/jpassing/windows-terminal</owners>
             <requireLicenseAcceptance>false</requireLicenseAcceptance>
