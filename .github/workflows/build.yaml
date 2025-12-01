@@ -23,37 +23,37 @@ jobs:
       with:
         fetch-depth: 0
         
-    #- name: Install Visual Studio components
-    #  shell: cmd
-    #  run: |
-    #    curl -fSLo vs_BuildTools.exe https://aka.ms/vs/17/release/vs_BuildTools.exe 
-    #    start /w vs_BuildTools ^
-    #        --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" ^
-    #        --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
-    #        --includeRecommended --quiet --norestart --nocache --wait 
-    #    powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" 
-    #  
-    #- name: Build ${{ matrix.platform }} (${{ matrix.configuration }})
-    #  shell: pwsh
-    #  run: |
-    #    # Initialize environment
-    #    Import-Module .\tools\OpenConsole.psm1
-    #    Set-MsBuildDevEnvironment
-    #
-    #    # Restore
-    #    .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
-    #    .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
-    #    dotnet restore OpenConsoleMinimal.sln
-    #    
-    #    # Build
-    #    msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
-        
-    - name: Create dummy output (for debugging only)
+    - name: Install Visual Studio components
       shell: cmd
       run: |
-        md bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control
-        echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll
+        curl -fSLo vs_BuildTools.exe https://aka.ms/vs/17/release/vs_BuildTools.exe 
+        start /w vs_BuildTools ^
+            --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" ^
+            --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
+            --includeRecommended --quiet --norestart --nocache --wait 
+        powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" 
+      
+    - name: Build ${{ matrix.platform }} (${{ matrix.configuration }})
+      shell: pwsh
+      run: |
+        # Initialize environment
+        Import-Module .\tools\OpenConsole.psm1
+        Set-MsBuildDevEnvironment
     
+        # Restore
+        .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
+        .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
+        dotnet restore OpenConsoleMinimal.sln
+        
+        # Build
+        msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
+        
+    #- name: Create dummy output (for debugging only)
+    #  shell: cmd
+    #  run: |
+    #    md bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control
+    #    echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll
+    #
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
@@ -105,7 +105,7 @@ jobs:
         @'
         <?xml version="1.0" encoding="utf-8"?>
         <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ItemGroup Condition="'$(PlatformTarget)'!='AnyCPU'">
+          <ItemGroup Condition="'$(Platform)'!='AnyCPU'">
             <!-- Copy platform-specific files -->
             <NativeLibs Include="$(MSBuildThisFileDirectory)\..\content\$(PlatformTarget)\*.*" />
             <None Include="@(NativeLibs)">
@@ -114,7 +114,7 @@ jobs:
             </None>
           </ItemGroup>
           
-          <ItemGroup Condition="'$(PlatformTarget)'=='AnyCPU'">
+          <ItemGroup Condition="'$(Platform)'=='AnyCPU'">
             <!-- Copy files for all platforms into separate folders -->
             <NativeLibs Include="$(MSBuildThisFileDirectory)\..\content\**\*.*" />
             <None Include="@(NativeLibs)">
