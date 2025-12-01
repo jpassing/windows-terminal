@@ -81,12 +81,22 @@ jobs:
     - name: Setup NuGet CLI
       uses: nuget/setup-nuget@v1
       
+    - name: Initialize variables
+      shell: pwsh 
+      id: set_vars
+      run: |
+        $PackageId = 'JPassing.Terminal.Control'
+        $PackageVersion = "${{ github.run_number }}.0.0-${{ matrix.configuration }}"
+        
+        # Write the variables to the $GITHUB_OUTPUT file to share them 
+
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "package_id=$PackageId"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "package_version=$PackageVersion"
+      
     - name: Create NuGet package metadata
       shell: pwsh
       run: |
         Get-ChildItem -Recurse artifacts | Select-Object FullName, Length | Out-String -Width 2048
-        
-        $PackageId = 'JPassing.Terminal.Control'
 
         @'
         <?xml version="1.0" encoding="utf-8"?>
@@ -101,14 +111,14 @@ jobs:
             </None>
           </ItemGroup>
         </Project>
-        '@ > "$($PackageId).targets"
+        '@ > "${{ steps.set_vars.outputs.package_id }}.targets"
 
         @"
         <?xml version="1.0"?>
         <package>
           <metadata>
-            <id>$($PackageId)</id>
-            <version>${{ github.run_number }}.0.0</version>
+            <id>${{ steps.set_vars.outputs.package_id }}</id>
+            <version>${{ steps.set_vars.outputs.package_version }}</version>
             <authors>https://github.com/jpassing/windows-terminal</authors>
             <owners>https://github.com/jpassing/windows-terminal</owners>
             <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -119,11 +129,17 @@ jobs:
             <!-- pretend the library is platform-neutral -->
             <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
             <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
-            <file src="$($PackageId).targets" target="build" />
+            <file src="${{ steps.set_vars.outputs.package_id }}.targets" target="build" />
           </files>
         </package>
         "@ > terminal.nuspec
         
         Get-Content terminal.nuspec 
         nuget pack -OutputDirectory bin -Verbosity detailed terminal.nuspec
-        
+          
+    - name: Release
+      uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+      if: github.ref_type == 'tag'
+      with:
+        files: |
+          bin\${{ steps.set_vars.outputs.package_id }}.${{ steps.set_vars.outputs.package_version }}.nupkg
