@@ -52,7 +52,7 @@ jobs:
       shell: cmd
       run: |
         md bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control
-        echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\test.txt
+        echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -84,10 +84,8 @@ jobs:
     - name: Create NuGet package metadata
       shell: pwsh
       run: |
-        # List artifacts
         Get-ChildItem -Recurse artifacts | Select-Object FullName, Length | Out-String -Width 2048
         
-        # Build NuGet Package
         $PackageId = 'JPassing.Terminal.Control'
 
         @'
@@ -119,15 +117,13 @@ jobs:
           </metadata>
           <files>
             <!-- pretend the library is platform-neutral -->
-            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\Microsoft.Terminal.Control\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
-            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\Microsoft.Terminal.Control\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
+            <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\arm64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
             <file src="$($PackageId).targets" target="build" />
           </files>
         </package>
         "@ > terminal.nuspec
         
-        
         Get-Content terminal.nuspec 
-        
         nuget pack -OutputDirectory bin -Verbosity detailed $PackageId.targets
         
