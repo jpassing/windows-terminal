@@ -116,7 +116,7 @@ jobs:
           
           <ItemGroup Condition="'$(PlatformTarget)'=='AnyCPU'">
             <!-- Copy files for all platforms into separate folders -->
-            <NativeLibs Include="$(MSBuildThisFileDirectory)\..\content\*\*.*" />
+            <NativeLibs Include="$(MSBuildThisFileDirectory)\..\content\**\*.*" />
             <None Include="@(NativeLibs)">
               <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
