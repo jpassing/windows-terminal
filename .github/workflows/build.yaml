@@ -97,7 +97,7 @@ jobs:
         Add-Content -Path $env:GITHUB_OUTPUT -Value "package_id=$PackageId"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "package_version=$PackageVersion"
       
-    - name: Publish NuGet package
+    - name: Create NuGet package
       shell: pwsh
       run: |
         Get-ChildItem -Recurse artifacts | Select-Object FullName, Length | Out-String -Width 2048
@@ -140,4 +140,24 @@ jobs:
         
         Get-Content terminal.nuspec 
         nuget pack -OutputDirectory bin -Verbosity detailed terminal.nuspec
+      
+    - name: Publish NuGet package
+      shell: pwsh
+      run: |
+        @"
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="github" value="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" />
+          </packageSources>
+          <packageSourceCredentials>
+            <github>
+              <add key="Username" value="${{ github.repository_owner }}" />
+              <add key="ClearTextPassword" value="${{ secrets.GITHUB_TOKEN }}" />
+            </github>
+          </packageSourceCredentials>
+        </configuration>
+        "@ | Out-File -FilePath NuGet.config -Encoding UTF8
+      
         nuget push bin\*.nupkg -Source "github" -ApiKey ${{ secrets.GITHUB_TOKEN }} -SkipDuplicate
