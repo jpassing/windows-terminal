@@ -52,7 +52,7 @@ jobs:
       shell: cmd
       run: |
         md bin\${{ matrix.platform }}\${{ matrix.configuration }}
-        echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\test.txt
+        echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\test.txt
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
