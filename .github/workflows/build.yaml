@@ -101,7 +101,7 @@ jobs:
             </None>
           </ItemGroup>
         </Project>
-        '@ > $($PackageId).targets
+        '@ > "$($PackageId).targets"
 
         @"
         <?xml version="1.0"?>
