@@ -6,6 +6,9 @@ on:
     branches: [ "fork-master" ]
 
 jobs:
+  #--------------------------------------------------------------------------
+  # Build.
+  #--------------------------------------------------------------------------
   build:
     runs-on: windows-2025
 
@@ -20,48 +23,105 @@ jobs:
       with:
         fetch-depth: 0
         
-    - name: Install Visual Studio components
+    #- name: Install Visual Studio components
+    #  shell: cmd
+    #  run: |
+    #    curl -fSLo vs_BuildTools.exe https://aka.ms/vs/17/release/vs_BuildTools.exe 
+    #    start /w vs_BuildTools ^
+    #        --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" ^
+    #        --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
+    #        --includeRecommended --quiet --norestart --nocache --wait 
+    #    powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" 
+    #  
+    #- name: Build ${{ matrix.platform }} (${{ matrix.configuration }})
+    #  shell: pwsh
+    #  run: |
+    #    # Initialize environment
+    #    Import-Module .\tools\OpenConsole.psm1
+    #    Set-MsBuildDevEnvironment
+    #
+    #    # Restore
+    #    .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
+    #    .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
+    #    dotnet restore OpenConsoleMinimal.sln
+    #    
+    #    # Build
+    #    msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
+        
+    - name: Create dummy output
       shell: cmd
       run: |
-        curl -fSLo vs_BuildTools.exe https://aka.ms/vs/17/release/vs_BuildTools.exe 
-        start /w vs_BuildTools ^
-            --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" ^
-            --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
-            --includeRecommended --quiet --norestart --nocache --wait 
-        powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" 
-      
-    - name: Build ${{ matrix.platform }} (${{ matrix.configuration }})
-      shell: pwsh
-      run: |
-        # Initialize environment
-        Import-Module .\tools\OpenConsole.psm1
-        Set-MsBuildDevEnvironment
+        md bin\${{ matrix.platform }}\${{ matrix.configuration }}
+        echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\test.txt
     
-        # Restore
-        .\dep\nuget\nuget.exe restore OpenConsoleMinimal.sln
-        .\dep\nuget\nuget.exe restore "dep\nuget\packages.config"
-        dotnet restore OpenConsoleMinimal.sln
-        
-        # Build
-        msbuild /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} OpenConsoleMinimal.sln
-        
-    - name: Create release package
-      shell: powershell
-      run: |
-        $SourceDir = "bin\${{ matrix.platform }}\${{ matrix.configuration }}"
-        $ZipFileName = "terminal-${{ matrix.platform }}-${{ matrix.configuration }}.zip"
-        Compress-Archive -Path "$SourceDir\*" -DestinationPath $ZipFileName -Force
-        
-    - name: Upload release package
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: Microsoft.Terminal.Control-${{ matrix.platform }}-${{ matrix.configuration }}
         path: |
-          terminal-${{ matrix.platform }}-${{ matrix.configuration }}.zip
-          
-    - name: Release
-      uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
-      if: github.ref_type == 'tag'
+          bin/*/*/Microsoft.Terminal.Control/**
+
+  #--------------------------------------------------------------------------
+  # Package.
+  #--------------------------------------------------------------------------
+  package:
+    runs-on: windows-2025
+    needs: build
+  
+  steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
       with:
-        files: |
-          terminal-${{ matrix.platform }}-${{ matrix.configuration }}.zip
+        path: ./artifacts
+      
+    - name: Setup NuGet CLI
+      uses: nuget/setup-nuget@v1
+      
+    - name: Create NuGet package metadata
+      shell: pwsh
+      run: |
+        Get-ChildItem -Recurse artifacts
+        
+        $PackageId = 'JPassing.Terminal.Control'
+
+@"
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <!-- Select files matching tragte platform -->
+    <NativeLibs Include="$(MSBuildThisFileDirectory)\..\**\runtimes\win10-$(PlatformTarget)\native\*.*" />
+    <None Include="@(NativeLibs)">
+      <!-- Copy files to output folder, not into a subfolder of it -->
+      <Link>%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
+"@ > $PackageId.targets
+
+@"
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>$($PackageId)</id>
+    <version>${{ github.job }}</version>
+    <authors>https://github.com/jpassing/windows-terminal</authors>
+    <owners>https://github.com/jpassing/windows-terminal</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Windows Terminal</description>
+    <tags>Native, native</tags>
+  </metadata>
+  <files>
+    <!-- pretend the library is platform-neutral -->
+    <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-x64\native" />
+    <file src="artifacts\Microsoft.Terminal.Control-arm64-${{ matrix.configuration }}\Microsoft.Terminal.Control.dll" target="runtimes\win10-arm64\native" />
+    <file src="$($PackageId).targets" target="build" />
+  </files>
+</package>
+"@ > terminal.nuspec
+        
+        
+        Get-Content terminal.nuspec 
+        
+        nuget pack -OutputDirectory bin -Verbosity detailed $PackageId.targets
+        
