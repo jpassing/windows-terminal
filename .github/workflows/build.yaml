@@ -51,7 +51,7 @@ jobs:
     - name: Create dummy output
       shell: cmd
       run: |
-        md bin\${{ matrix.platform }}\${{ matrix.configuration }}
+        md bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control
         echo "test" > bin\${{ matrix.platform }}\${{ matrix.configuration }}\Microsoft.Terminal.Control\test.txt
     
     - name: Upload artifact
