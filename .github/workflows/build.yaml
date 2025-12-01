@@ -67,6 +67,10 @@ jobs:
   package:
     runs-on: windows-2025
     needs: build
+    
+    permissions:
+      contents: read
+      packages: write # For package upload
 
     strategy:
       matrix:
@@ -93,7 +97,7 @@ jobs:
         Add-Content -Path $env:GITHUB_OUTPUT -Value "package_id=$PackageId"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "package_version=$PackageVersion"
       
-    - name: Create NuGet package metadata
+    - name: Publish NuGet package
       shell: pwsh
       run: |
         Get-ChildItem -Recurse artifacts | Select-Object FullName, Length | Out-String -Width 2048
@@ -136,10 +140,4 @@ jobs:
         
         Get-Content terminal.nuspec 
         nuget pack -OutputDirectory bin -Verbosity detailed terminal.nuspec
-          
-    - name: Release
-      uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
-      if: github.ref_type == 'tag'
-      with:
-        files: |
-          bin\${{ steps.set_vars.outputs.package_id }}.${{ steps.set_vars.outputs.package_version }}.nupkg
+        nuget push bin\*.nupkg -Source "github" -ApiKey ${{ secrets.GITHUB_TOKEN }} -SkipDuplicate
