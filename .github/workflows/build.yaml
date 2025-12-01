@@ -80,11 +80,13 @@ jobs:
     - name: Create NuGet package metadata
       shell: pwsh
       run: |
-        Get-ChildItem -Recurse artifacts
+        # List artifacts
+        tree artifacts
         
+        # Build NuGet Package
         $PackageId = 'JPassing.Terminal.Control'
 
-        @"
+        @'
         <?xml version="1.0" encoding="utf-8"?>
         <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <ItemGroup>
@@ -97,7 +99,7 @@ jobs:
             </None>
           </ItemGroup>
         </Project>
-        "@ > $PackageId.targets
+        '@ > $PackageId.targets
 
         @"
         <?xml version="1.0"?>
