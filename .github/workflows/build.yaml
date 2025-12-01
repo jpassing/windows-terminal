@@ -101,7 +101,7 @@ jobs:
             </None>
           </ItemGroup>
         </Project>
-        '@ > $PackageId.targets
+        '@ > $($PackageId).targets
 
         @"
         <?xml version="1.0"?>
@@ -125,5 +125,5 @@ jobs:
         "@ > terminal.nuspec
         
         Get-Content terminal.nuspec 
-        nuget pack -OutputDirectory bin -Verbosity detailed $PackageId.targets
+        nuget pack -OutputDirectory bin -Verbosity detailed terminal.nuspec
         
