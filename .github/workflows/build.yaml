@@ -143,10 +143,10 @@ jobs:
           <files>
             <file src="${{ steps.set_vars.outputs.package_id }}.targets" target="build" />
             
-            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.winmd" target="lib\uap10.0" />
-            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.winmd" target="lib\uap10.0" />
-            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\TerminalCore\Microsoft.Terminal.Core.winmd" target="lib\uap10.0" />
-            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\TerminalConnection\Microsoft.Terminal.TerminalConnection.winmd" target="lib\uap10.0" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Control\Microsoft.Terminal.Control.winmd" target="lib\netstandard2.0" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\Microsoft.Terminal.Settings.Model\Microsoft.Terminal.Settings.Model.winmd" target="lib\netstandard2.0" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\TerminalCore\Microsoft.Terminal.Core.winmd" target="lib\netstandard2.0" />
+            <file src="artifacts\Microsoft.Terminal.Control-x64-${{ matrix.configuration }}\x64\${{ matrix.configuration }}\TerminalConnection\Microsoft.Terminal.TerminalConnection.winmd" target="lib\netstandard2.0" />
             
             <!-- Include DLL files as content -->
             
