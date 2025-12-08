@@ -257,6 +257,11 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         uint64_t OwningHwnd();
         void OwningHwnd(uint64_t owner);
 
+        // BEGIN-PATCH
+        uint64_t SwapChainHwnd();
+        void SwapChainHwnd(uint64_t hwnd);
+        // END-PATCH
+
         TerminalConnection::ITerminalConnection Connection();
         void Connection(const TerminalConnection::ITerminalConnection& connection);
 
@@ -400,6 +405,10 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         float _panelWidth{ 0 };
         float _panelHeight{ 0 };
         float _compositionScale{ 0 };
+
+        // BEGIN-PATCH: Add property
+        uint64_t _swapChainHwnd{ 0 };
+        // END-PATCH
 
         // Audio stuff.
         MidiAudio _midiAudio;

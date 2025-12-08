@@ -213,5 +213,8 @@ namespace Microsoft.Terminal.Control
 
         event Windows.Foundation.TypedEventHandler<Object, CompletionsChangedEventArgs> CompletionsChanged;
 
+        // BEGIN-PATCH: Add property
+        UInt64 SwapChainHwnd;
+        // END-PATCH
     };
 }

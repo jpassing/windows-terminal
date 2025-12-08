@@ -349,6 +349,18 @@ namespace winrt::Microsoft::Terminal::Control::implementation
             }
 
             _renderEngine = std::make_unique<::Microsoft::Console::Render::AtlasEngine>();
+
+            // BEGIN-PATCH: Attach swap chain to an HWND
+            if (_swapChainHwnd != 0)
+            {
+                HRESULT hr = _renderEngine->SetHwnd((HWND)_swapChainHwnd);
+                if (FAILED(hr))
+                {
+                    return false;
+                }
+            }
+            // END-PATCH
+
             _renderer->AddRenderEngine(_renderEngine.get());
 
             // Hook up the warnings callback as early as possible so that we catch everything.
@@ -392,12 +404,17 @@ namespace winrt::Microsoft::Terminal::Control::implementation
 
             _terminal->CreateFromSettings(*_settings, *_renderer);
 
-            // Tell the render engine to notify us when the swap chain changes.
-            // We do this after we initially set the swapchain so as to avoid
-            // unnecessary callbacks (and locking problems)
-            _renderEngine->SetCallback([this](HANDLE handle) {
-                _renderEngineSwapChainChanged(handle);
-            });
+            // BEGIN-PATCH: Skip callback when attached to HWND
+            if (_swapChainHwnd == 0)
+            {
+                // Tell the render engine to notify us when the swap chain changes.
+                // We do this after we initially set the swapchain so as to avoid
+                // unnecessary callbacks (and locking problems)
+                _renderEngine->SetCallback([this](HANDLE handle) {
+                    _renderEngineSwapChainChanged(handle);
+                });
+            }
+            // END-PATCH
 
             _renderEngine->SetRetroTerminalEffect(_settings->RetroTerminalEffect());
             _renderEngine->SetPixelShaderPath(_settings->PixelShaderPath());
@@ -2589,6 +2606,18 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         }
         _owningHwnd = owner;
     }
+
+    // BEGIN-PATCH
+    uint64_t ControlCore::SwapChainHwnd()
+    {
+        return _swapChainHwnd;
+    }
+
+    void ControlCore::SwapChainHwnd(uint64_t hwnd)
+    {
+        _swapChainHwnd = hwnd;
+    }
+    // END-PATCH
 
     // This one is fairly hot! it gets called every time we redraw the scrollbar
     // marks, which is frequently. Fortunately, we don't need to bother with
